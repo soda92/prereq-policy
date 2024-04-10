@@ -3,18 +3,16 @@ foreach ($vm in $VMs) {
     $rgName = $vm."RESOURCE GROUP"
     $vmName = $vm."NAME"
     $location = $vm."LOCATION"
-    # checking if the VM has a system-assigned identity
+    # check if the VM has a system-assigned identity
     $vm = Get-AzVM -ResourceGroupName $rgName -VMName $vmName
-    if ($vm.Identity.Type -eq "SystemAssigned") {
-    }
-    else {
-        # "assigning a system-assigned identity"
+    if ($vm.Identity -eq $null) {
+        # assign a system-assigned identity
         Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType SystemAssigned
     }
 
     $isExtensionInstalled = $false
     foreach ($ext in $vm.Extensions) {
-        if ($ext.Name -Contains "AzurePolicy") {
+        if ($ext.Name.Contains("AzurePolicy")) {
             $isExtensionInstalled = $true
             break
         }
@@ -24,7 +22,7 @@ foreach ($vm in $VMs) {
         continue
     }
 
-    # checking power state
+    # check power state
     $vmState = Get-AzVM -ResourceGroupName $rgName -VMName $vmName -Status
     $isOn = $vmState.Statuses[1].Code -Contains "running"
     $needTurnOff = $false
@@ -35,7 +33,7 @@ foreach ($vm in $VMs) {
     }
 
     if (!$isExtensionInstalled) {
-        # installing extension
+        # install extension
         if ($vm.OSProfile.WindowsConfiguration -ne $null) {
             Set-AzVMExtension -Publisher 'Microsoft.GuestConfiguration' -ExtensionType 'ConfigurationforWindows' -Name 'AzurePolicyforWindows' -TypeHandlerVersion 1.0 -ResourceGroupName $rgName -Location $location -VMName $vmName
         }
