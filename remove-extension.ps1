@@ -1,24 +1,15 @@
 $VMs = Import-Csv "AzureVirtualMachines.csv"
 foreach ($vm in $VMs) {
-    if ($vm.NAME -eq $null) {
-        continue
-    }
     $rgName = $vm."RESOURCE GROUP"
     $vmName = $vm."NAME"
     $location = $vm."LOCATION"
     # check if the VM has a system-assigned identity
     $vm = Get-AzVM -ResourceGroupName $rgName -VMName $vmName
-    if ($vm.Identity.Type -eq "SystemAssigned") {
-        # remove system-assigned identity
-        Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType None
-    }
-    else {
-    }
-
+    $vm = Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType None
 
     $isExtensionInstalled = $false
     foreach ($ext in $vm.Extensions) {
-        if ($ext.Name -Contains "AzurePolicy") {
+        if ($ext.Name.Contains("AzurePolicy")) {
             $isExtensionInstalled = $true
             break
         }
@@ -41,10 +32,10 @@ foreach ($vm in $VMs) {
     if ($isExtensionInstalled) {
         # uninstall extension
         if ($vm.OSProfile.WindowsConfiguration -ne $null) {
-            Remove-AzVMExtension -ResourceGroupName $rgName -VMName $vmName -Name 'AzurePolicyforWindows'
+            Remove-AzVMExtension -ResourceGroupName $rgName -VMName $vmName -Name 'AzurePolicyforWindows' -Force
         }
         else {
-            Remove-AzVMExtension -ResourceGroupName $rgName -VMName $vmName -Name 'AzurePolicyforLinux'
+            Remove-AzVMExtension -ResourceGroupName $rgName -VMName $vmName -Name 'AzurePolicyforLinux' -Force
         }
         Update-AzVM -ResourceGroupName $rgName -VM $vm
     }
