@@ -6,14 +6,15 @@ foreach ($vm in $VMs) {
     $rgName = $vm."RESOURCE GROUP"
     $vmName = $vm."NAME"
     $location = $vm."LOCATION"
-    # checking if the VM has a system-assigned identity
+    # check if the VM has a system-assigned identity
     $vm = Get-AzVM -ResourceGroupName $rgName -VMName $vmName
     if ($vm.Identity.Type -eq "SystemAssigned") {
+        # remove system-assigned identity
+        Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType None
     }
     else {
-        # "assigning a system-assigned identity"
-        Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType SystemAssigned
     }
+
 
     $isExtensionInstalled = $false
     foreach ($ext in $vm.Extensions) {
@@ -23,11 +24,11 @@ foreach ($vm in $VMs) {
         }
     }
 
-    if ($isExtensionInstalled) {
+    if (!$isExtensionInstalled) {
         continue
     }
 
-    # checking power state
+    # check power state
     $vmState = Get-AzVM -ResourceGroupName $rgName -VMName $vmName -Status
     $isOn = $vmState.Statuses[1].Code -Contains "running"
     $needTurnOff = $false
@@ -37,15 +38,15 @@ foreach ($vm in $VMs) {
         $needTurnOff = $true
     }
 
-    if (!$isExtensionInstalled) {
-        # installing extension
+    if ($isExtensionInstalled) {
+        # uninstall extension
         if ($vm.OSProfile.WindowsConfiguration -ne $null) {
-            Set-AzVMExtension -Publisher 'Microsoft.GuestConfiguration' -ExtensionType 'ConfigurationforWindows' -Name 'AzurePolicyforWindows' -TypeHandlerVersion 1.0 -ResourceGroupName $rgName -Location $location -VMName $vmName
+            Remove-AzVMExtension -ResourceGroupName $rgName -VMName $vmName -Name 'AzurePolicyforWindows'
         }
         else {
-            Set-AzVMExtension -Publisher 'Microsoft.GuestConfiguration' -ExtensionType 'ConfigurationForLinux' -Name 'AzurePolicyforLinux' -TypeHandlerVersion 1.0 -ResourceGroupName $rgName -Location $location -VMName $vmName -EnableAutomaticUpgrade $true
+            Remove-AzVMExtension -ResourceGroupName $rgName -VMName $vmName -Name 'AzurePolicyforLinux'
         }
-
+        Update-AzVM -ResourceGroupName $rgName -VM $vm
     }
 
     if ($needTurnOff) {
