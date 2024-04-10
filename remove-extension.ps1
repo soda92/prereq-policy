@@ -5,7 +5,10 @@ foreach ($vm in $VMs) {
     $location = $vm."LOCATION"
     # check if the VM has a system-assigned identity
     $vm = Get-AzVM -ResourceGroupName $rgName -VMName $vmName
-    $vm = Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType None
+    if ($vm.Identity -ne $null) {
+        # remove the system-assigned identity
+        Update-AzVM -ResourceGroupName $rgName -VM $vm -IdentityType None
+    }
 
     $isExtensionInstalled = $false
     foreach ($ext in $vm.Extensions) {
