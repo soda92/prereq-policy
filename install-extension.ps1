@@ -1,8 +1,5 @@
 $VMs = Import-Csv "AzureVirtualMachines.csv"
 foreach ($vm in $VMs) {
-    if ($vm.NAME -eq $null) {
-        continue
-    }
     $rgName = $vm."RESOURCE GROUP"
     $vmName = $vm."NAME"
     $location = $vm."LOCATION"
